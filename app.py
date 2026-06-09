@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import os
 from PIL import Image
 
@@ -73,7 +73,10 @@ BULAN_MAP = {
     7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"
 }
 
-hari_ini = datetime.now()
+# --- PERBAIKAN ZONA WAKTU (WITA = UTC+8) ---
+waktu_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+hari_ini = waktu_utc + timedelta(hours=8)
+
 # Mengunci default penanggalan dinamis mengikuti hari ini pada tahun data (2026)
 default_tgl = datetime(2026, hari_ini.month, hari_ini.day)
 
@@ -172,7 +175,6 @@ with tab1:
         df_tren = load_range_data(tgl_mulai, tgl_selesai, pilih_wilayah)
         
         if not df_tren.empty:
-            # METRIK HIGHLIGHT EKSTREM GLOBAL (Mendukung Dark Mode)
             idx_max, idx_min = df_tren['Ketinggian'].idxmax(), df_tren['Ketinggian'].idxmin()
             m1, m2 = st.columns(2)
             
@@ -194,7 +196,6 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-            # PEMBUATAN GRAFIK PLOTLY
             fig = go.Figure()
             warna = ['#0ea5e9', '#0d9488', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b', '#84cc16']
             max_y_grafik = df_tren['Ketinggian'].max() + 0.8
@@ -203,19 +204,16 @@ with tab1:
                 df_w = df_tren[df_tren['Wilayah'] == wil].copy()
                 efek_fill = 'tozeroy' if len(pilih_wilayah) == 1 else None
                 
-                # Kurva Utama Pasut
                 fig.add_trace(go.Scatter(
                     x=df_w['Waktu'], y=df_w['Ketinggian'], name=wil, 
                     line=dict(color=warna[i%7], width=3), fill=efek_fill, fillcolor='rgba(14, 165, 233, 0.12)',
                     hovertemplate="<b>%{x|%d %b %Y, %H:00 WITA}</b><br>Tinggi: %{y:.2f} m<extra></extra>"
                 ))
                 
-                # Detektor Puncak Harian Ganda
                 df_w['S1'], df_w['S2'] = df_w['Ketinggian'].shift(1), df_w['Ketinggian'].shift(-1)
                 hi = df_w[(df_w['Ketinggian']>df_w['S1']) & (df_w['Ketinggian']>df_w['S2'])]
                 lo = df_w[(df_w['Ketinggian']<df_w['S1']) & (df_w['Ketinggian']<df_w['S2'])]
                 
-                # Marker Pasang
                 fig.add_trace(go.Scatter(
                     x=hi['Waktu'], y=hi['Ketinggian'], mode='markers+text', 
                     text=hi['Ketinggian'].apply(lambda x:f"<b>{x:.2f}m</b>"), textposition="top center", 
@@ -223,7 +221,6 @@ with tab1:
                     name="Titik Pasang", showlegend=(i==0)
                 ))
                 
-                # Marker Surut
                 fig.add_trace(go.Scatter(
                     x=lo['Waktu'], y=lo['Ketinggian'], mode='markers+text', 
                     text=lo['Ketinggian'].apply(lambda x:f"<b>{x:.2f}m</b>"), textposition="bottom center", 
@@ -231,17 +228,16 @@ with tab1:
                     name="Titik Surut", showlegend=(i==0)
                 ))
 
-            # Integrasi Tanda Ikon Astronomi dari Kalender
-            for date_str, (name, icon, p_type) in FASE_BULAN_2026.items():
+            for date_str, (name, icon, type) in FASE_BULAN_2026.items():
                 dt_obj = datetime.strptime(date_str, '%Y-%m-%d')
                 if tgl_mulai <= dt_obj.date() <= tgl_selesai:
                     posisi_x = dt_obj.replace(hour=12)
                     fig.add_annotation(
                         x=posisi_x, y=max_y_grafik - 0.2, text=icon, showarrow=False, 
-                        font=dict(size=24), hovertext=f"Fase BMKG: {name}"
+                        font=dict(size=24), hovertext=f"Fase Kalender BMKG: {name}"
                     )
 
-            # Garis Vertikal Penunjuk Waktu Real-Time
+            # Sinkronisasi garis real-time (WITA) ke tampilan grafik
             waktu_realtime = hari_ini.replace(year=2026)
             fig.add_trace(go.Scatter(
                 x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik],
@@ -251,10 +247,9 @@ with tab1:
             
             fig.add_annotation(
                 x=waktu_realtime, y=max_y_grafik - 0.05, text="WAKTU SAAT INI", showarrow=False,
-                xanchor="left", yanchor="bottom", font=dict(color="#10b981", size=10, weight="bold")
+                xanchor="left", yanchor="bottom", font=dict(color="#047857", size=10, weight="bold")
             )
 
-            # Tema "streamlit" agar mengikuti Light/Dark mode
             fig.update_layout(
                 title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut Pasut NTT (WITA)</b>", font=dict(size=15)),
                 xaxis=dict(title="Sumbu Waktu Kronologis", showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"),
@@ -297,7 +292,6 @@ with tab1:
 
         else:
             st.warning("⚠️ Berkas data tidak ditemukan. Pastikan file Excel bulanan diletakkan di folder aplikasi dengan format nama yang benar.")
-
 
 # ==========================================
 # TAB 2: PERBANDINGAN MULTI-TANGGAL (OVERLAP)
@@ -344,7 +338,6 @@ with tab2:
     else:
         st.info("Silakan tentukan minimal 1 opsi tanggal pada parameter komparasi di atas.")
 
-
 # ==========================================
 # TAB 3: PORTAL KALENDER FASE BULAN
 # ==========================================
@@ -364,7 +357,6 @@ with tab3:
     
     df_fase = pd.DataFrame(cal_data)
     st.dataframe(df_fase, use_container_width=True, hide_index=True)
-
 
 # ==========================================
 # TAB 4: PANEL EKSPOR DATA MATRIKS ASLI
