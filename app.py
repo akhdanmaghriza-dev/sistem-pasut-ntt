@@ -12,14 +12,14 @@ st.set_page_config(page_title="Portal Pasut Maritim Tenau Kupang", layout="wide"
 # Menyuntikkan CSS agar Menu Tab tetap menempel di atas saat di-scroll
 st.markdown("""
 <style>
-    div[data-testid="stTabs"] > div:first-child {
-        position: -webkit-sticky;
-        position: sticky;
-        top: 2.8rem;
-        z-index: 999;
-        background-color: var(--background-color);
-        padding-top: 1rem;
-        padding-bottom: 0.5rem;
+    /* Memaksa menu tabs untuk menempel di atas */
+    div[data-testid="stTabs"] > div:first-of-type {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        top: 3.5rem !important; /* Disesuaikan agar tidak tertutup header Streamlit */
+        z-index: 99999 !important;
+        background-color: var(--background-color) !important;
+        padding-top: 10px;
         border-bottom: 2px solid var(--secondary-background-color);
     }
 </style>
@@ -238,10 +238,27 @@ with tab1:
         if not df_tren.empty:
             idx_max, idx_min = df_tren['Ketinggian'].idxmax(), df_tren['Ketinggian'].idxmin()
             m1, m2 = st.columns(2)
+            
+            # --- UPDATE UI/UX KARTU METRIK ---
             with m1:
-                st.markdown(f"<div style='background-color: rgba(239,68,68,0.15); border-left: 5px solid #ef4444; padding: 10px; border-radius: 5px;'><p style='color: #ef4444; margin:0; font-weight: bold; font-size:13px;'>🔴 REKOR PASANG TERTINGGI</p><h3 style='color: var(--text-color); margin:2px 0;'>{df_tren.loc[idx_max, 'Ketinggian']:.2f} m <span style='font-size:14px; font-weight:normal;'>({df_tren.loc[idx_max, 'Wilayah']})</span></h3><p style='color: gray; margin:0; font-size:12px;'>{df_tren.loc[idx_max, 'Waktu'].strftime('%d %b %Y | %H:00 WITA')}</p></div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                <div style='background-color: rgba(239,68,68,0.15); border-left: 5px solid #ef4444; padding: 12px; border-radius: 6px;'>
+                    <p style='color: #ef4444; margin:0; font-weight: 700; font-size:13px; letter-spacing: 0.5px;'>🌊 PUNCAK PASANG MAKSIMUM</p>
+                    <h3 style='color: var(--text-color); margin:4px 0 0 0; font-size: 28px;'>{df_tren.loc[idx_max, 'Ketinggian']:.2f} m <span style='font-size:14px; font-weight:normal; color: gray;'>({df_tren.loc[idx_max, 'Wilayah']})</span></h3>
+                    <p style='color: gray; margin:4px 0 0 0; font-size:12px;'>🕒 {df_tren.loc[idx_max, 'Waktu'].strftime('%d %b %Y | %H:00 WITA')}</p>
+                    <p style='color: #ef4444; margin:4px 0 0 0; font-size:10px; font-style: italic;'>*Pada rentang waktu terpilih</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
             with m2:
-                st.markdown(f"<div style='background-color: rgba(59,130,246,0.15); border-left: 5px solid #3b82f6; padding: 10px; border-radius: 5px;'><p style='color: #3b82f6; margin:0; font-weight: bold; font-size:13px;'>🔵 REKOR SURUT TERENDAH</p><h3 style='color: var(--text-color); margin:2px 0;'>{df_tren.loc[idx_min, 'Ketinggian']:.2f} m <span style='font-size:14px; font-weight:normal;'>({df_tren.loc[idx_min, 'Wilayah']})</span></h3><p style='color: gray; margin:0; font-size:12px;'>{df_tren.loc[idx_min, 'Waktu'].strftime('%d %b %Y | %H:00 WITA')}</p></div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                <div style='background-color: rgba(59,130,246,0.15); border-left: 5px solid #3b82f6; padding: 12px; border-radius: 6px;'>
+                    <p style='color: #3b82f6; margin:0; font-weight: 700; font-size:13px; letter-spacing: 0.5px;'>📉 TITIK SURUT MINIMUM</p>
+                    <h3 style='color: var(--text-color); margin:4px 0 0 0; font-size: 28px;'>{df_tren.loc[idx_min, 'Ketinggian']:.2f} m <span style='font-size:14px; font-weight:normal; color: gray;'>({df_tren.loc[idx_min, 'Wilayah']})</span></h3>
+                    <p style='color: gray; margin:4px 0 0 0; font-size:12px;'>🕒 {df_tren.loc[idx_min, 'Waktu'].strftime('%d %b %Y | %H:00 WITA')}</p>
+                    <p style='color: #3b82f6; margin:4px 0 0 0; font-size:10px; font-style: italic;'>*Pada rentang waktu terpilih</p>
+                </div>
+                """, unsafe_allow_html=True)
 
             fig = go.Figure()
             warna = ['#0ea5e9', '#0d9488', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b', '#84cc16']
@@ -273,7 +290,7 @@ with tab1:
                                 fig.add_vrect(
                                     x0=start_rob, x1=end_rob, 
                                     fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
-                                    annotation_text=f"⚠️ POTENSI ROB<br>Rentang: {prediksi_rentang} m", 
+                                    annotation_text=f"⚠️ POTENSI ROB<br>Estimasi: {prediksi_rentang} m", 
                                     annotation_position="top left", 
                                     annotation_font=dict(color="#b91c1c", size=11, weight="bold")
                                 )
@@ -362,14 +379,18 @@ with tab5:
     df_rob_tampil = df_rob[['Bulan', 'Lokasi', 'Threshold', 'Prediksi_Pasut', 'Potensi', 'Tanggal_Potensi']].copy()
     df_rob_tampil.rename(columns={'Threshold': 'Threshold Rob (m)', 'Prediksi_Pasut': 'Prediksi Pasut (Buku)', 'Potensi': 'Apakah Potensi Rob?', 'Tanggal_Potensi': 'Tanggal Potensi Rob'}, inplace=True)
     
+    # Memisahkan Tabel dan Teks Ringkasan Per Bulan
     bulan_unik = sorted(df_rob_tampil['Bulan'].unique(), key=lambda x: int(x.split('.')[0]))
+    
     for bln in bulan_unik:
         nama_bulan = bln.split(' ')[1]
         st.markdown(f"#### 📅 Laporan Bulan {nama_bulan}")
         
+        # Filter dataframe hanya untuk bulan ini dan sembunyikan kolom "Bulan"
         df_bulan = df_rob_tampil[df_rob_tampil['Bulan'] == bln].drop(columns=['Bulan'])
         st.dataframe(df_bulan, use_container_width=True, hide_index=True)
         
+        # Teks Ringkasan khusus untuk bulan ini
         data_bulan_ini = df_rob[(df_rob['Bulan'] == bln) & (df_rob['Potensi'] == "✅ Ya")]
         if not data_bulan_ini.empty:
             tanggal_kumpulan = data_bulan_ini['Tanggal_Potensi'].unique()
@@ -378,7 +399,7 @@ with tab5:
         else:
             st.success(f"**Ringkasan Teks Peringatan Rob {nama_bulan}:**\n\nPeringatan Tanggal Potensi Rob: **NIHIL**")
         
-        st.write("---")
+        st.write("---") # Garis pemisah antar bulan
 
 # --- 6. FOOTER ---
 st.write("---")
