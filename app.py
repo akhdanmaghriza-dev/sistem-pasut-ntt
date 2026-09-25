@@ -12,10 +12,10 @@ st.set_page_config(page_title="Portal Pasut Maritim NTT", layout="wide", page_ic
 # INJEKSI CSS MODERN: Menyembunyikan elemen bawaan & menambahkan gaya modern
 st.markdown("""
 <style>
-    /* 1. Sembunyikan elemen bawaan Streamlit (PERBAIKAN KALENDER) */
+    /* 1. Sembunyikan elemen bawaan Streamlit (Aman untuk Kalender) */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    .stApp > header {display:none;}
+    header[data-testid="stHeader"] {display:none;}
     .stDeployButton {display:none !important;}
 
     /* 2. Kurangi jarak kosong di bagian atas aplikasi */
@@ -148,23 +148,20 @@ for periode in PERIODE_ROB:
 
 BULAN_MAP = {1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"}
 
-# Setup default kalender saat pertama dibuka
 waktu_utc = datetime.now(timezone.utc).replace(tzinfo=None)
 hari_ini = waktu_utc + timedelta(hours=8)
 try:
     default_tgl = date(2026, hari_ini.month, hari_ini.day)
 except ValueError:
-    default_tgl = date(2026, 2, 28) # Pencegahan error tanggal 29 Februari
+    default_tgl = date(2026, 2, 28) 
 
-# --- 2. FUNGSI LOAD DATA ---
+# --- 2. FUNGSI LOAD DATA (DI-UPGRADE ANTI CRASH TANGGAL) ---
 @st.cache_data
 def load_range_data(start_date, end_date, wilayah_list):
     all_data = []
+    bulan_dibutuhkan = list(range(start_date.month, end_date.month + 1)) if start_date.year == end_date.year else [start_date.month, end_date.month]
     
-    # Ambil list bulan yang dicakup oleh tanggal mulai hingga selesai
-    bulan_dibutuhkan = list(range(start_date.month, end_date.month + 1))
-    
-    # Fungsi Anti-Crash untuk tanggal Excel (Misal: 30 Februari)
+    # Pelindung sistem dari tanggal fiktif di Excel
     def create_safe_datetime(year, month, day, hour):
         try:
             if pd.isna(day) or pd.isna(hour): return pd.NaT
@@ -180,29 +177,21 @@ def load_range_data(start_date, end_date, wilayah_list):
                     df = pd.read_excel(file_name, sheet_name=wilayah)
                     df.rename(columns={df.columns[0]: 'Tanggal'}, inplace=True)
                     df_melt = df.melt(id_vars=['Tanggal'], var_name='Jam', value_name='Ketinggian')
-                    
                     df_melt['Jam'] = pd.to_numeric(df_melt['Jam'], errors='coerce')
                     df_melt['Ketinggian'] = pd.to_numeric(df_melt['Ketinggian'], errors='coerce')
-                    
-                    # Terapkan safe parser
                     df_melt['Waktu'] = df_melt.apply(lambda r: create_safe_datetime(2026, bln, r['Tanggal'], r['Jam']), axis=1)
-                    
-                    # Buang data yang tanggalnya NaT (tidak valid)
                     df_melt = df_melt.dropna(subset=['Waktu', 'Ketinggian'])
                     df_melt['Wilayah'] = wilayah
                     all_data.append(df_melt)
-                except Exception as e: 
-                    pass # Abaikan jika sheet tidak ditemukan
-                    
+                except Exception: pass
+                
     if not all_data: return pd.DataFrame()
-    
     df_master = pd.concat(all_data, ignore_index=True)
     start_dt = datetime.combine(start_date, datetime.min.time())
     end_dt = datetime.combine(end_date, datetime.max.time())
-    
     return df_master[(df_master['Waktu'] >= start_dt) & (df_master['Waktu'] <= end_dt)].sort_values(['Wilayah', 'Waktu']).reset_index(drop=True)
 
-# --- 3. HEADER, LOGO & LIVE CLOCK (GAYA BMKG) ---
+# --- 3. HEADER, LOGO & LIVE CLOCK (BMKG STYLE) ---
 col_logo, col_title, col_clock = st.columns([1, 8, 3])
 
 with col_logo:
@@ -320,7 +309,7 @@ with tab1:
             fig = go.Figure()
             warna = ['#0ea5e9', '#0d9488', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b', '#84cc16']
             
-            # PERBAIKAN GRAFIK TERPOTONG: Puncak Y ditambah 1.5 meter agar luas 
+            # DI-UPGRADE AGAR GRAFIK ATAS TIDAK KEPOTONG
             max_y_grafik = df_tren['Ketinggian'].max() + 1.5
             
             for i, wil in enumerate(pilih_wilayah):
@@ -349,7 +338,6 @@ with tab1:
                                 fig.add_vrect(
                                     x0=start_rob, x1=end_rob + timedelta(days=1), 
                                     fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
-                                    # PERBAIKAN: Posisi Teks Rob diubah dari 'top left' ke dalam grafik dengan jarak aman
                                     annotation_text=f"<b>⚠️ POTENSI ROB</b><br><b>Estimasi: {prediksi_rentang} m</b>", 
                                     annotation_position="top left", 
                                     annotation_font=dict(color="#b91c1c", size=12)
@@ -360,20 +348,16 @@ with tab1:
                 dt_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
                 if tgl_mulai <= dt_obj <= tgl_selesai:
                     dt_with_time = datetime.combine(dt_obj, datetime.min.time()).replace(hour=12)
-                    # PERBAIKAN: Ikon bulan digantung dari atas, yanchor="top"
                     fig.add_annotation(x=dt_with_time, y=max_y_grafik - 0.1, text=icon, showarrow=False, xanchor="center", yanchor="top", font=dict(size=24), hovertext=f"<b>Fase BMKG: {name}</b>")
 
             waktu_realtime = hari_ini.replace(year=2026)
             fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=3, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
-            
-            # PERBAIKAN: Teks 'WAKTU SAAT INI' digantung dari batas paling atas, yanchor="top"
             fig.add_annotation(x=waktu_realtime, y=max_y_grafik, text="<b>WAKTU SAAT INI</b>", showarrow=False, xanchor="left", yanchor="top", font=dict(color="#047857", size=11))
 
             fig.update_layout(
                 title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut (LAT)</b>", font=dict(size=18)), 
                 xaxis=dict(title="<b>Kronologi Waktu (WITA)</b>", tickfont=dict(weight='bold'), showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"), 
                 yaxis=dict(title="<b>Tinggi Air (m)</b>", tickfont=dict(weight='bold'), showgrid=True, range=[0, max_y_grafik]), 
-                # PERBAIKAN: Legenda ditarik naik (y=1.12) dan margin atas (t=100)
                 legend=dict(orientation="h", yanchor="bottom", y=1.12, xanchor="right", x=1), 
                 height=600, margin=dict(t=100, b=30, l=40, r=40), hovermode="x unified",
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
