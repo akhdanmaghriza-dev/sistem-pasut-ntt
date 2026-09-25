@@ -156,7 +156,7 @@ try:
 except ValueError:
     default_tgl = date(2026, 2, 28) # Pencegahan error tanggal 29 Februari
 
-# --- 2. FUNGSI LOAD DATA (DIPERBAIKI) ---
+# --- 2. FUNGSI LOAD DATA ---
 @st.cache_data
 def load_range_data(start_date, end_date, wilayah_list):
     all_data = []
@@ -320,8 +320,8 @@ with tab1:
             fig = go.Figure()
             warna = ['#0ea5e9', '#0d9488', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b', '#84cc16']
             
-            # PERBAIKAN GRAFIK TERPOTONG (Nilai max ditambah agar atap lebih lega)
-            max_y_grafik = df_tren['Ketinggian'].max() + 1.2
+            # PERBAIKAN GRAFIK TERPOTONG: Puncak Y ditambah 1.5 meter agar luas 
+            max_y_grafik = df_tren['Ketinggian'].max() + 1.5
             
             for i, wil in enumerate(pilih_wilayah):
                 df_w = df_tren[df_tren['Wilayah'] == wil].copy()
@@ -349,6 +349,7 @@ with tab1:
                                 fig.add_vrect(
                                     x0=start_rob, x1=end_rob + timedelta(days=1), 
                                     fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
+                                    # PERBAIKAN: Posisi Teks Rob diubah dari 'top left' ke dalam grafik dengan jarak aman
                                     annotation_text=f"<b>⚠️ POTENSI ROB</b><br><b>Estimasi: {prediksi_rentang} m</b>", 
                                     annotation_position="top left", 
                                     annotation_font=dict(color="#b91c1c", size=12)
@@ -359,21 +360,22 @@ with tab1:
                 dt_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
                 if tgl_mulai <= dt_obj <= tgl_selesai:
                     dt_with_time = datetime.combine(dt_obj, datetime.min.time()).replace(hour=12)
-                    fig.add_annotation(x=dt_with_time, y=max_y_grafik - 0.2, text=icon, showarrow=False, font=dict(size=24), hovertext=f"<b>Fase BMKG: {name}</b>")
+                    # PERBAIKAN: Ikon bulan digantung dari atas, yanchor="top"
+                    fig.add_annotation(x=dt_with_time, y=max_y_grafik - 0.1, text=icon, showarrow=False, xanchor="center", yanchor="top", font=dict(size=24), hovertext=f"<b>Fase BMKG: {name}</b>")
 
             waktu_realtime = hari_ini.replace(year=2026)
             fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=3, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
-            fig.add_annotation(x=waktu_realtime, y=max_y_grafik - 0.05, text="<b>WAKTU SAAT INI</b>", showarrow=False, xanchor="left", yanchor="bottom", font=dict(color="#047857", size=11))
+            
+            # PERBAIKAN: Teks 'WAKTU SAAT INI' digantung dari batas paling atas, yanchor="top"
+            fig.add_annotation(x=waktu_realtime, y=max_y_grafik, text="<b>WAKTU SAAT INI</b>", showarrow=False, xanchor="left", yanchor="top", font=dict(color="#047857", size=11))
 
-            # PERBAIKAN GRAFIK TERPOTONG (Margin Top 't' dinaikkan menjadi 85, dan Legend 'y' menjadi 1.08)
             fig.update_layout(
                 title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut (LAT)</b>", font=dict(size=18)), 
                 xaxis=dict(title="<b>Kronologi Waktu (WITA)</b>", tickfont=dict(weight='bold'), showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"), 
                 yaxis=dict(title="<b>Tinggi Air (m)</b>", tickfont=dict(weight='bold'), showgrid=True, range=[0, max_y_grafik]), 
-                legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="right", x=1), 
-                height=600, 
-                margin=dict(t=85, b=30, l=40, r=40), 
-                hovermode="x unified",
+                # PERBAIKAN: Legenda ditarik naik (y=1.12) dan margin atas (t=100)
+                legend=dict(orientation="h", yanchor="bottom", y=1.12, xanchor="right", x=1), 
+                height=600, margin=dict(t=100, b=30, l=40, r=40), hovermode="x unified",
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
             )
             st.plotly_chart(fig, use_container_width=True, theme="streamlit")
