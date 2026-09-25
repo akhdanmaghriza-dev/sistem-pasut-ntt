@@ -6,21 +6,49 @@ import os
 from PIL import Image
 import streamlit.components.v1 as components
 
-# --- 1. CONFIG HALAMAN & CSS STICKY TABS ---
-st.set_page_config(page_title="Portal Pasut Maritim Tenau Kupang", layout="wide", page_icon="🌊")
+# --- 1. CONFIG HALAMAN & CSS GLOBAL ---
+st.set_page_config(page_title="Portal Pasut Maritim NTT", layout="wide", page_icon="🌊")
 
-# Menyuntikkan CSS agar Menu Tab tetap menempel di atas saat di-scroll
+# INJEKSI CSS MODERN: Menyembunyikan elemen bawaan & menambahkan gaya modern
 st.markdown("""
 <style>
-    /* Memaksa menu tabs untuk menempel di atas */
+    /* 1. Sembunyikan elemen bawaan Streamlit agar terlihat seperti web mandiri */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stApp > header {display:none;}
+    
+    /* Sembunyikan tombol Deploy yang kadang muncul */
+    .stDeployButton {display:none !important;}
+
+    /* 2. Kurangi jarak kosong di bagian atas aplikasi */
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 2rem !important;
+    }
+
+    /* 3. Memaksa menu tabs untuk menempel di atas dengan gaya elegan */
     div[data-testid="stTabs"] > div:first-of-type {
         position: -webkit-sticky !important;
         position: sticky !important;
-        top: 3.5rem !important;
+        top: 0rem !important;
         z-index: 99999 !important;
         background-color: var(--background-color) !important;
-        padding-top: 10px;
+        padding-top: 15px;
+        padding-bottom: 5px;
         border-bottom: 2px solid var(--secondary-background-color);
+    }
+    
+    /* 4. Gaya Tab Text agar lebih tebal dan modern */
+    button[data-baseweb="tab"] {
+        font-size: 15px !important;
+        letter-spacing: 0.5px;
+    }
+
+    /* 5. Efek Shadow pada Tabel DataFrame */
+    [data-testid="stDataFrame"] {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border-radius: 8px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -62,7 +90,7 @@ FASE_BULAN_2026 = {
     '2026-12-24': ('Supermoon (Perigee + Bulan Purnama)', '🔵✨', 'Spring Tide Maksimum (Sangat Tinggi)'),
 }
 
-# --- GENERATOR DATA POTENSI ROB 2026 (Format Lintas Bulan Terdukung) ---
+# --- GENERATOR DATA POTENSI ROB 2026 ---
 PERIODE_ROB = [
     ("1. Januari", "2026-01-01", "2026-01-06", "1 - 6 Januari 2026"),
     ("1. Januari", "2026-01-17", "2026-01-22", "17 - 22 Januari 2026"),
@@ -151,8 +179,7 @@ def load_range_data(start_date, end_date, wilayah_list):
     end_dt = datetime.combine(end_date, datetime.max.time())
     return df_master[(df_master['Waktu'] >= start_dt) & (df_master['Waktu'] <= end_dt)].sort_values(['Wilayah', 'Waktu']).reset_index(drop=True)
 
-# --- 3. HEADER, LOGO & LIVE CLOCK ---
-st.write("")
+# --- 3. HEADER, LOGO & LIVE CLOCK (GAYA BMKG) ---
 col_logo, col_title, col_clock = st.columns([1, 8, 3])
 
 with col_logo:
@@ -160,30 +187,35 @@ with col_logo:
     if logo_file: st.image(Image.open(logo_file), width=90)
 
 with col_title:
-    st.markdown("<h1 style='color: var(--text-color); margin:0; padding:0; line-height:1.1;'>Prakiraan Pasang Surut Air Laut NTT</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='color: gray; margin:0; padding:0; font-weight:bold;'>Stasiun Meteorologi Kelas III Maritim Tenau - Kupang</h3>", unsafe_allow_html=True)
+    # Header dengan gradasi Biru-Hijau khas BMKG
+    st.markdown("""
+    <div style='background: linear-gradient(90deg, #0f4c81 0%, #1ea54a 100%); 
+                padding: 15px 25px; 
+                border-radius: 8px; 
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+                margin-top: 5px;'>
+        <h1 style='color: white; margin:0; padding:0; line-height:1.1; font-weight:800; font-size:28px;'>
+            Prakiraan Pasang Surut Air Laut NTT
+        </h1>
+        <h4 style='color: #e2e8f0; margin:5px 0 0 0; padding:0; font-weight:500; font-size:15px;'>
+            Stasiun Meteorologi Kelas III Maritim Tenau - Kupang
+        </h4>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col_clock:
-    # Komponen Jam Digital Berjalan (Auto-Adapt Theme)
     components.html("""
     <style>
         body { margin: 0; padding: 0; background-color: transparent; }
-        .clock-container { font-family: sans-serif; text-align: right; margin-top: 5px; }
-        @media (prefers-color-scheme: dark) {
-            .wita-label { color: #34d399; } 
-            .utc-label { color: #60a5fa; }
-            .title { color: #94a3b8; }
-        }
-        @media (prefers-color-scheme: light) {
-            .wita-label { color: #059669; }
-            .utc-label { color: #2563eb; }
-            .title { color: #64748b; }
-        }
+        .clock-container { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: right; margin-top: 5px; color: #1e293b; }
+        .wita-label { color: #059669; }
+        .utc-label { color: #0f4c81; }
+        .title { color: #64748b; }
     </style>
     <div class="clock-container">
-        <div class="title" style="font-size: 13px; margin-bottom: 2px;"><b>PANEL WAKTU REAL-TIME:</b></div>
-        <div class="wita-label" style="font-size: 20px; font-weight: bold; line-height: 1.1;">WITA: <span id="wita"></span></div>
-        <div class="utc-label" style="font-size: 15px; font-weight: bold;">UTC: <span id="utc"></span></div>
+        <div class="title" style="font-size: 11px; margin-bottom: 2px; letter-spacing: 1px;"><b>PANEL WAKTU REAL-TIME:</b></div>
+        <div class="wita-label" style="font-size: 22px; font-weight: 800; line-height: 1.1;">WITA: <span id="wita"></span></div>
+        <div class="utc-label" style="font-size: 14px; font-weight: 600;">UTC: <span id="utc"></span></div>
     </div>
     <script>
         function update() {
@@ -199,8 +231,7 @@ with col_clock:
     </script>
     """, height=80)
 
-# --- 4. PANDUAN PENGGUNAAN (LENGKAP) ---
-st.write("")
+# --- 4. PANDUAN PENGGUNAAN ---
 with st.expander("💡 Panduan Penggunaan & Cara Membaca Grafik"):
     st.markdown("""
     **A. Cara Membaca Dasbor:**
@@ -217,52 +248,47 @@ with st.expander("💡 Panduan Penggunaan & Cara Membaca Grafik"):
     - **Neap Tide (Pasang Perbani):** Terjadi saat posisi bulan separuh, selisih pasang-surut harian bernilai paling minimum (kondisi air laut lebih tenang).
     """)
 
-st.write("---")
-
 # --- 5. TABS INTERAKTIF ---
-# PERBAIKAN: Seluruh teks di dalam Tabs sekarang di-Bold
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "**📈 TREN RENTANG WAKTU**", 
-    "**📊 KOMPARASI HARI**", 
-    "**🌕 KALENDER FASE BULAN**", 
-    "**💾 EKSPOR MATRIKS**", 
-    "**🚨 LAPORAN POTENSI ROB**"
+    "📈 TREN RENTANG WAKTU", 
+    "📊 KOMPARASI HARI", 
+    "🌕 KALENDER FASE BULAN", 
+    "💾 EKSPOR MATRIKS", 
+    "🚨 LAPORAN POTENSI ROB"
 ])
 
 # ==========================================
 # TAB 1: TREN RENTANG WAKTU & JADWAL HARIAN
 # ==========================================
 with tab1:
-    st.markdown("### **⚙️ Parameter Analisis Rentang Waktu**")
+    st.write("") 
     p_col1, p_col2, p_col3 = st.columns([2, 1, 1])
     daftar_wilayah = ["Kupang", "Atapupu", "Labuan Bajo", "Ende", "Maumere", "Waingapu", "Kalabahi"]
     with p_col1: pilih_wilayah = st.multiselect("**📍 Pilih Lokasi Pengamatan:**", daftar_wilayah, default=["Kupang"])
-    with p_col2: tgl_mulai = st.date_input("**Tanggal Mulai:**", value=default_tgl, min_value=datetime(2026,1,1), max_value=datetime(2026,12,31))
-    with p_col3: tgl_selesai = st.date_input("**Tanggal Selesai:**", value=default_tgl, min_value=datetime(2026,1,1), max_value=datetime(2026,12,31))
+    with p_col2: tgl_mulai = st.date_input("**📅 Tanggal Mulai:**", value=default_tgl, min_value=datetime(2026,1,1), max_value=datetime(2026,12,31))
+    with p_col3: tgl_selesai = st.date_input("**📅 Tanggal Selesai:**", value=default_tgl, min_value=datetime(2026,1,1), max_value=datetime(2026,12,31))
 
     if tgl_selesai >= tgl_mulai and len(pilih_wilayah) > 0:
         df_tren = load_range_data(tgl_mulai, tgl_selesai, pilih_wilayah)
         if not df_tren.empty:
             idx_max, idx_min = df_tren['Ketinggian'].idxmax(), df_tren['Ketinggian'].idxmin()
-            m1, m2 = st.columns(2)
             
+            m1, m2 = st.columns(2)
             with m1:
                 st.markdown(f"""
-                <div style='background-color: rgba(239,68,68,0.15); border-left: 5px solid #ef4444; padding: 12px; border-radius: 6px;'>
-                    <p style='color: #ef4444; margin:0; font-weight: 800; font-size:13px; letter-spacing: 0.5px;'>🌊 PUNCAK PASANG MAKSIMUM</p>
-                    <h3 style='color: var(--text-color); margin:4px 0 0 0; font-size: 28px;'><b>{df_tren.loc[idx_max, 'Ketinggian']:.2f} m</b> <span style='font-size:14px; font-weight:normal; color: gray;'>({df_tren.loc[idx_max, 'Wilayah']})</span></h3>
-                    <p style='color: gray; margin:4px 0 0 0; font-size:12px;'><b>🕒 {df_tren.loc[idx_max, 'Waktu'].strftime('%d %b %Y | %H:00 WITA')}</b></p>
-                    <p style='color: #ef4444; margin:4px 0 0 0; font-size:10px; font-style: italic;'><b>*Pada rentang waktu terpilih</b></p>
+                <div style='background-color: var(--secondary-background-color); border-left: 6px solid #ef4444; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 20px;'>
+                    <p style='color: #ef4444; margin:0; font-weight: 800; font-size:14px; letter-spacing: 1px;'>🌊 PUNCAK PASANG MAKSIMUM</p>
+                    <h2 style='color: var(--text-color); margin:5px 0 0 0; font-size: 36px; font-weight: 800;'>{df_tren.loc[idx_max, 'Ketinggian']:.2f} <span style='font-size:16px; font-weight:500; color: gray;'>m</span></h2>
+                    <p style='color: var(--text-color); margin:5px 0 0 0; font-size:14px; font-weight: 600;'>📍 {df_tren.loc[idx_max, 'Wilayah']} | 🕒 {df_tren.loc[idx_max, 'Waktu'].strftime('%d %b %Y, %H:00 WITA')}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
             with m2:
                 st.markdown(f"""
-                <div style='background-color: rgba(59,130,246,0.15); border-left: 5px solid #3b82f6; padding: 12px; border-radius: 6px;'>
-                    <p style='color: #3b82f6; margin:0; font-weight: 800; font-size:13px; letter-spacing: 0.5px;'>📉 TITIK SURUT MINIMUM</p>
-                    <h3 style='color: var(--text-color); margin:4px 0 0 0; font-size: 28px;'><b>{df_tren.loc[idx_min, 'Ketinggian']:.2f} m</b> <span style='font-size:14px; font-weight:normal; color: gray;'>({df_tren.loc[idx_min, 'Wilayah']})</span></h3>
-                    <p style='color: gray; margin:4px 0 0 0; font-size:12px;'><b>🕒 {df_tren.loc[idx_min, 'Waktu'].strftime('%d %b %Y | %H:00 WITA')}</b></p>
-                    <p style='color: #3b82f6; margin:4px 0 0 0; font-size:10px; font-style: italic;'><b>*Pada rentang waktu terpilih</b></p>
+                <div style='background-color: var(--secondary-background-color); border-left: 6px solid #3b82f6; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 20px;'>
+                    <p style='color: #3b82f6; margin:0; font-weight: 800; font-size:14px; letter-spacing: 1px;'>📉 TITIK SURUT MINIMUM</p>
+                    <h2 style='color: var(--text-color); margin:5px 0 0 0; font-size: 36px; font-weight: 800;'>{df_tren.loc[idx_min, 'Ketinggian']:.2f} <span style='font-size:16px; font-weight:500; color: gray;'>m</span></h2>
+                    <p style='color: var(--text-color); margin:5px 0 0 0; font-size:14px; font-weight: 600;'>📍 {df_tren.loc[idx_min, 'Wilayah']} | 🕒 {df_tren.loc[idx_min, 'Waktu'].strftime('%d %b %Y, %H:00 WITA')}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -273,12 +299,12 @@ with tab1:
             for i, wil in enumerate(pilih_wilayah):
                 df_w = df_tren[df_tren['Wilayah'] == wil].copy()
                 efek_fill = 'tozeroy' if len(pilih_wilayah) == 1 else None
-                fig.add_trace(go.Scatter(x=df_w['Waktu'], y=df_w['Ketinggian'], name=wil, line=dict(color=warna[i%7], width=3), fill=efek_fill, fillcolor='rgba(14, 165, 233, 0.12)', hovertemplate="<b>%{x|%d %b %Y, %H:00 WITA}</b><br>Tinggi: <b>%{y:.2f} m</b><extra></extra>"))
+                fig.add_trace(go.Scatter(x=df_w['Waktu'], y=df_w['Ketinggian'], name=wil, line=dict(color=warna[i%7], width=3, shape='spline'), fill=efek_fill, fillcolor='rgba(14, 165, 233, 0.12)', hovertemplate="<b>%{x|%d %b %Y, %H:00 WITA}</b><br>Tinggi: <b>%{y:.2f} m</b><extra></extra>"))
                 
                 df_w['S1'], df_w['S2'] = df_w['Ketinggian'].shift(1), df_w['Ketinggian'].shift(-1)
                 hi = df_w[(df_w['Ketinggian']>df_w['S1']) & (df_w['Ketinggian']>df_w['S2'])]
                 lo = df_w[(df_w['Ketinggian']<df_w['S1']) & (df_w['Ketinggian']<df_w['S2'])]
-                # PERBAIKAN: Text pada Titik Grafik di-Bold secara HTML
+                
                 fig.add_trace(go.Scatter(x=hi['Waktu'], y=hi['Ketinggian'], mode='markers+text', text=hi['Ketinggian'].apply(lambda x:f"<b>{x:.2f}m</b>"), textposition="top center", textfont=dict(color="#ef4444", size=12), marker=dict(color='#ef4444', size=8), name="Titik Pasang", showlegend=(i==0)))
                 fig.add_trace(go.Scatter(x=lo['Waktu'], y=lo['Ketinggian'], mode='markers+text', text=lo['Ketinggian'].apply(lambda x:f"<b>{x:.2f}m</b>"), textposition="bottom center", textfont=dict(color="#3b82f6", size=12), marker=dict(color='#3b82f6', size=8), name="Titik Surut", showlegend=(i==0)))
 
@@ -311,18 +337,17 @@ with tab1:
             fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=3, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
             fig.add_annotation(x=waktu_realtime, y=max_y_grafik - 0.05, text="<b>WAKTU SAAT INI</b>", showarrow=False, xanchor="left", yanchor="bottom", font=dict(color="#047857", size=11))
 
-            # PERBAIKAN: Angka pada Sumbu X dan Y (Tickfont) di-Bold
             fig.update_layout(
-                title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut Pasut NTT (WITA)</b>", font=dict(size=16)), 
-                xaxis=dict(title="<b>Sumbu Waktu Kronologis</b>", tickfont=dict(weight='bold'), showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"), 
-                yaxis=dict(title="<b>Tinggi Air Gelombang - Datum LAT (m)</b>", tickfont=dict(weight='bold'), showgrid=True, range=[0, max_y_grafik]), 
+                title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut (LAT)</b>", font=dict(size=18)), 
+                xaxis=dict(title="<b>Kronologi Waktu (WITA)</b>", tickfont=dict(weight='bold'), showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"), 
+                yaxis=dict(title="<b>Tinggi Air (m)</b>", tickfont=dict(weight='bold'), showgrid=True, range=[0, max_y_grafik]), 
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), 
-                height=600, margin=dict(t=50, b=30, l=40, r=40), hovermode="x unified"
+                height=600, margin=dict(t=50, b=30, l=40, r=40), hovermode="x unified",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
             )
             st.plotly_chart(fig, use_container_width=True, theme="streamlit")
             
-            st.markdown("---")
-            st.markdown("### **🕒 Jadwal Waktu Kejadian Pasang dan Surut Harian**")
+            st.markdown("### **🕒 Jadwal Pasang Surut Harian**")
             for wil in pilih_wilayah:
                 if len(pilih_wilayah) > 1: st.markdown(f"**📍 Lokasi Pelabuhan: {wil}**")
                 df_w = df_tren[df_tren['Wilayah'] == wil].copy()
@@ -337,8 +362,8 @@ with tab1:
                 l.rename(columns={'Waktu':'WAKTU SURUT MINIMUM', 'Ketinggian':'KETINGGIAN LAT (M)'}, inplace=True)
                 
                 c1, c2 = st.columns(2)
-                with c1: st.markdown("<h5 style='color: #ef4444; margin-bottom: 5px;'><b>⬆️ Jadwal Pasang Tertinggi</b></h5>", unsafe_allow_html=True); st.dataframe(h.reset_index(drop=True), use_container_width=True)
-                with c2: st.markdown("<h5 style='color: #3b82f6; margin-bottom: 5px;'><b>⬇️ Jadwal Surut Terendah</b></h5>", unsafe_allow_html=True); st.dataframe(l.reset_index(drop=True), use_container_width=True)
+                with c1: st.markdown("<h5 style='color: #ef4444; margin-bottom: 5px; font-weight:700;'>⬆️ Jadwal Pasang Tertinggi</h5>", unsafe_allow_html=True); st.dataframe(h.reset_index(drop=True), use_container_width=True)
+                with c2: st.markdown("<h5 style='color: #3b82f6; margin-bottom: 5px; font-weight:700;'>⬇️ Jadwal Surut Terendah</h5>", unsafe_allow_html=True); st.dataframe(l.reset_index(drop=True), use_container_width=True)
         else:
             st.warning("⚠️ Berkas data tidak ditemukan.")
 
@@ -346,7 +371,7 @@ with tab1:
 # TAB 2 & 3: KOMPARASI & FASE BULAN
 # ==========================================
 with tab2:
-    st.markdown("### **📊 Perbandingan Pasut Multi-Tanggal (Sumbu 24-Jam)**")
+    st.write("")
     col_w, col_t = st.columns([1, 2])
     with col_w: wil_cmp = st.selectbox("**📍 Pilih Lokasi/Pelabuhan:**", daftar_wilayah, key="cmp_wil")
     with col_t: tgl_cmp = st.multiselect("**📅 Pilih Tanggal Komparasi (Maksimal 6):**", [d.strftime('%Y-%m-%d') for d in pd.date_range('2026-01-01', '2026-12-31')], default=[default_tgl.strftime('%Y-%m-%d')], max_selections=6)
@@ -359,13 +384,13 @@ with tab2:
             df_day_full = load_range_data(d_obj.date(), d_obj.date(), [wil_cmp])
             if not df_day_full.empty:
                 data_found = True
-                fig_cmp.add_trace(go.Scatter(x=df_day_full['Waktu'].dt.hour + 1, y=df_day_full['Ketinggian'], mode='lines+markers', line=dict(width=3), name=f"<b>Tgl {d_str}</b>", hovertemplate="<b>Jam %{x}:00 WITA</b><br>Tinggi: <b>%{y:.2f} m</b><extra></extra>"))
+                fig_cmp.add_trace(go.Scatter(x=df_day_full['Waktu'].dt.hour + 1, y=df_day_full['Ketinggian'], mode='lines+markers', line=dict(width=3, shape='spline'), name=f"<b>Tgl {d_str}</b>", hovertemplate="<b>Jam %{x}:00 WITA</b><br>Tinggi: <b>%{y:.2f} m</b><extra></extra>"))
         if data_found:
-            fig_cmp.update_layout(title=dict(text=f"<b>Analisis Komparasi Siklus Harian Pelabuhan {wil_cmp}</b>", font=dict(size=16)), xaxis=dict(title="<b>Jam Operasional (WITA)</b>", tickfont=dict(weight='bold'), tickmode='linear', tick0=1, dtick=1), yaxis=dict(title="<b>Tinggi Air - LAT (m)</b>", tickfont=dict(weight='bold')), height=500, margin=dict(t=50, b=40, l=40, r=40), hovermode="x unified")
+            fig_cmp.update_layout(title=dict(text=f"<b>Analisis Komparasi Siklus Harian Pelabuhan {wil_cmp}</b>", font=dict(size=18)), xaxis=dict(title="<b>Jam Operasional (WITA)</b>", tickfont=dict(weight='bold'), tickmode='linear', tick0=1, dtick=1), yaxis=dict(title="<b>Tinggi Air - LAT (m)</b>", tickfont=dict(weight='bold')), height=500, margin=dict(t=50, b=40, l=40, r=40), hovermode="x unified", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig_cmp, use_container_width=True, theme="streamlit")
 
 with tab3:
-    st.markdown("### **🌕 Kalender Astronomi Fase Bulan BMKG 2026**")
+    st.write("")
     df_fase = pd.DataFrame([{'Tanggal Puncak Fase': datetime.strptime(d, '%Y-%m-%d').strftime('%d %B %Y'), 'Ikon Visual': v[1], 'Fenomena Astronomis': v[0], 'Dampak Pada Siklus Air Laut': v[2]} for d, v in FASE_BULAN_2026.items()])
     st.dataframe(df_fase, use_container_width=True, hide_index=True)
 
@@ -373,7 +398,7 @@ with tab3:
 # TAB 4 & 5: EKSPOR & LAPORAN ROB PUSAT
 # ==========================================
 with tab4:
-    st.markdown("### **💾 Ekspor Hasil Ekstraksi Data Tabular**")
+    st.write("")
     if 'df_tren' in locals() and not df_tren.empty:
         df_w = df_tren.copy()
         df_w['Bulan'] = df_w['Waktu'].dt.month.map(BULAN_MAP)
@@ -385,8 +410,8 @@ with tab4:
         st.dataframe(df_matrix, use_container_width=True)
 
 with tab5:
-    st.markdown("### **🚨 Laporan Bulanan Peringatan Dini Potensi Banjir Rob**")
-    st.write("Modul ini secara otomatis merekap potensi rob sepanjang tahun 2026 berdasarkan fase bulan ekstrem dan threshold wilayah. Anda dapat menyalin tabel dan teks di bawah ini ke format Excel laporan pusat.")
+    st.write("")
+    st.info("💡 Modul ini secara otomatis merekap potensi rob sepanjang tahun 2026. Anda dapat menyalin tabel dan teks di bawah ini ke format Excel laporan pusat.")
     
     df_rob = pd.DataFrame(DATA_ROB_2026)
     df_rob_tampil = df_rob[['Bulan', 'Lokasi', 'Threshold', 'Prediksi_Pasut', 'Potensi', 'Tanggal_Potensi']].copy()
@@ -394,13 +419,11 @@ with tab5:
     
     bulan_unik = sorted(df_rob_tampil['Bulan'].unique(), key=lambda x: int(x.split('.')[0]))
     
-    # PERBAIKAN: Fitur Dropdown Pilihan Bulan
     pilihan_bulan = ["Tampilkan Semua Bulan"] + bulan_unik
     filter_bulan = st.selectbox("**Pilih Bulan Laporan:**", pilihan_bulan)
     
     st.markdown("---")
     
-    # Logika Filter
     if filter_bulan == "Tampilkan Semua Bulan":
         bulan_ditampilkan = bulan_unik
     else:
@@ -408,7 +431,7 @@ with tab5:
         
     for bln in bulan_ditampilkan:
         nama_bulan = bln.split(' ')[1]
-        st.markdown(f"#### **📅 Laporan Bulan {nama_bulan}**")
+        st.markdown(f"<h4 style='font-weight:700;'>📅 Laporan Bulan {nama_bulan}</h4>", unsafe_allow_html=True)
         
         df_bulan = df_rob_tampil[df_rob_tampil['Bulan'] == bln].drop(columns=['Bulan'])
         st.dataframe(df_bulan, use_container_width=True, hide_index=True)
@@ -417,11 +440,16 @@ with tab5:
         if not data_bulan_ini.empty:
             tanggal_kumpulan = data_bulan_ini['Tanggal_Potensi'].unique()
             teks_tanggal = ", ".join(tanggal_kumpulan)
-            st.info(f"**Ringkasan Teks Peringatan Rob {nama_bulan}:**\n\nPeringatan Tanggal Potensi Rob: **{teks_tanggal}**")
+            st.success(f"**Ringkasan Teks Peringatan Rob {nama_bulan}:**\n\nPeringatan Tanggal Potensi Rob: **{teks_tanggal}**")
         else:
             st.success(f"**Ringkasan Teks Peringatan Rob {nama_bulan}:**\n\nPeringatan Tanggal Potensi Rob: **NIHIL**")
         
         st.write("---")
 
-# --- 6. FOOTER ---
-st.markdown("""<div style='text-align: center; color: gray; font-size: 11px; padding: 12px; background-color: var(--secondary-background-color); border-radius: 5px; border: 1px solid var(--border-color);'><b>SUMBER PRIMER:</b> Pusat Hidro-Oseanografi TNI AL (Pushidrosal) & BMKG Pusat.<br><b>DISCLAIMER:</b> Seluruh rentang peringatan rob merupakan hasil algoritma kalender astronomis. Ketinggian muka air laut aktual di lapangan dapat berbeda akibat faktor cuaca ekstrem setempat.</div>""", unsafe_allow_html=True)
+# --- 6. FOOTER CUSTOM ---
+st.markdown("""
+<div style='text-align: center; color: #64748b; font-size: 12px; padding: 20px; margin-top: 40px; background-color: var(--secondary-background-color); border-radius: 8px; border: 1px solid var(--border-color);'>
+    <b>SUMBER PRIMER:</b> Pusat Hidro-Oseanografi TNI AL (Pushidrosal) & Badan Meteorologi Klimatologi dan Geofisika (BMKG) Pusat.<br>
+    <i>DISCLAIMER: Seluruh rentang peringatan rob merupakan hasil algoritma kalender astronomis. Ketinggian muka air laut aktual di lapangan dapat berbeda akibat faktor cuaca ekstrem setempat.</i>
+</div>
+""", unsafe_allow_html=True)
