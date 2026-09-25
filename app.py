@@ -29,29 +29,51 @@ st.markdown("""
         padding-bottom: 2rem !important;
     }
 
-    /* 4. TABS MENU: Background Putih agar terpisah dari abu-abu */
+    /* 4. TABS MENU (DIBUAT POP-UP, BOLD, & SHADOW) */
     div[data-testid="stTabs"] > div:first-of-type {
         position: -webkit-sticky !important;
         position: sticky !important;
         top: 0rem !important;
         z-index: 99999 !important;
-        background-color: #ffffff !important;
+        background-color: #f1f5f9 !important; 
         padding-top: 15px;
-        padding-bottom: 5px;
-        border-bottom: 2px solid #cbd5e1 !important;
-        border-radius: 0 0 8px 8px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        padding-bottom: 15px;
     }
     
-    /* Gaya Tab Text */
+    /* Tombol Tab Inaktif */
     button[data-baseweb="tab"] {
-        font-size: 15px !important;
-        letter-spacing: 0.5px;
-        font-weight: 600 !important;
+        font-size: 14px !important;
+        font-weight: 800 !important; 
         color: #475569 !important;
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important; 
+        padding: 10px 16px !important;
+        margin-right: 10px !important; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important; 
+        transition: all 0.2s ease-in-out !important;
     }
 
-    /* 5. PERBAIKAN CARD UI: Membungkus Grafik dan Tabel otomatis tanpa merusak Streamlit */
+    /* Efek saat mouse diarahkan (Hover) */
+    button[data-baseweb="tab"]:hover {
+        transform: translateY(-2px); 
+        box-shadow: 0 6px 12px -1px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* Tombol Tab Aktif (Sedang Dipilih) */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #0f4c81 !important; 
+        color: #ffffff !important;
+        border: 1px solid #0f4c81 !important;
+        box-shadow: 0 4px 10px rgba(15, 76, 129, 0.4) !important; 
+    }
+
+    /* Sembunyikan garis biru tipis bawaan Streamlit di bawah tab */
+    div[data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+
+    /* 5. PERBAIKAN CARD UI: Membungkus Grafik dan Tabel */
     [data-testid="stDataFrame"], [data-testid="stPlotlyChart"] {
         background-color: #ffffff;
         border: 1px solid #cbd5e1;
@@ -298,19 +320,20 @@ with tab1:
             idx_max, idx_min = df_tren['Ketinggian'].idxmax(), df_tren['Ketinggian'].idxmin()
             
             m1, m2 = st.columns(2)
-            # Kartu Maksimum & Minimum dengan Shadow
+            # Kartu Maksimum dengan Background Merah Transparan
             with m1:
                 st.markdown(f"""
-                <div style='background-color: #ffffff; border: 1px solid #cbd5e1; border-left: 6px solid #ef4444; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px;'>
+                <div style='background-color: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-left: 6px solid #ef4444; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px;'>
                     <p style='color: #ef4444; margin:0; font-weight: 800; font-size:14px; letter-spacing: 1px;'>🌊 PUNCAK PASANG MAKSIMUM</p>
                     <h2 style='color: #1e293b; margin:5px 0 0 0; font-size: 36px; font-weight: 800;'>{df_tren.loc[idx_max, 'Ketinggian']:.2f} <span style='font-size:16px; font-weight:500; color: gray;'>m</span></h2>
                     <p style='color: #475569; margin:5px 0 0 0; font-size:14px; font-weight: 600;'>📍 {df_tren.loc[idx_max, 'Wilayah']} | 🕒 {df_tren.loc[idx_max, 'Waktu'].strftime('%d %b %Y, %H:00 WITA')}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
+            # Kartu Minimum dengan Background Biru Transparan
             with m2:
                 st.markdown(f"""
-                <div style='background-color: #ffffff; border: 1px solid #cbd5e1; border-left: 6px solid #3b82f6; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px;'>
+                <div style='background-color: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-left: 6px solid #3b82f6; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px;'>
                     <p style='color: #3b82f6; margin:0; font-weight: 800; font-size:14px; letter-spacing: 1px;'>📉 TITIK SURUT MINIMUM</p>
                     <h2 style='color: #1e293b; margin:5px 0 0 0; font-size: 36px; font-weight: 800;'>{df_tren.loc[idx_min, 'Ketinggian']:.2f} <span style='font-size:16px; font-weight:500; color: gray;'>m</span></h2>
                     <p style='color: #475569; margin:5px 0 0 0; font-size:14px; font-weight: 600;'>📍 {df_tren.loc[idx_min, 'Wilayah']} | 🕒 {df_tren.loc[idx_min, 'Waktu'].strftime('%d %b %Y, %H:00 WITA')}</p>
@@ -319,7 +342,7 @@ with tab1:
 
             fig = go.Figure()
             warna = ['#0ea5e9', '#0d9488', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b', '#84cc16']
-            max_y_grafik = df_tren['Ketinggian'].max() + 1.2
+            max_y_grafik = df_tren['Ketinggian'].max() + 1.5
             
             for i, wil in enumerate(pilih_wilayah):
                 df_w = df_tren[df_tren['Wilayah'] == wil].copy()
@@ -347,7 +370,6 @@ with tab1:
                                 fig.add_vrect(
                                     x0=start_rob, x1=end_rob + timedelta(days=1), 
                                     fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
-                                    # PERBAIKAN: "inside top left" memastikan teks tidak menabrak batas luar grafik
                                     annotation_text=f"<b>⚠️ POTENSI ROB</b><br><b>Estimasi: {prediksi_rentang} m</b>", 
                                     annotation_position="inside top left", 
                                     annotation_font=dict(color="#b91c1c", size=11)
@@ -358,13 +380,11 @@ with tab1:
                 dt_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
                 if tgl_mulai <= dt_obj <= tgl_selesai:
                     dt_with_time = datetime.combine(dt_obj, datetime.min.time()).replace(hour=12)
-                    # PERBAIKAN: Ikon bulan diturunkan agar tidak menabrak atap
                     fig.add_annotation(x=dt_with_time, y=max_y_grafik - 0.4, text=icon, showarrow=False, xanchor="center", yanchor="top", font=dict(size=24), hovertext=f"<b>Fase BMKG: {name}</b>")
 
             waktu_realtime = hari_ini.replace(year=2026)
             fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=2, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
             
-            # PERBAIKAN: Label diturunkan posisinya dan diberi background agar tidak bertumpuk dengan garis merah
             fig.add_annotation(
                 x=waktu_realtime, 
                 y=max_y_grafik - 0.1, 
@@ -379,7 +399,6 @@ with tab1:
                 borderpad=3
             )
 
-            # Render layout Plotly secara transparan, CSS Streamlit di atas yang akan menjadikannya Card putih
             fig.update_layout(
                 title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut (LAT)</b>", font=dict(size=18)), 
                 xaxis=dict(title="<b>Kronologi Waktu (WITA)</b>", tickfont=dict(weight='bold'), showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"), 
@@ -389,7 +408,6 @@ with tab1:
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
             )
             
-            # Menampilkan plot secara aman tanpa kotak div html yang rentan error
             st.plotly_chart(fig, use_container_width=True, theme="streamlit")
             
             st.write("---")
