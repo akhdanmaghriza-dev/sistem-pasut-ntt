@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 import os
 from PIL import Image
 import streamlit.components.v1 as components
@@ -12,13 +12,11 @@ st.set_page_config(page_title="Portal Pasut Maritim NTT", layout="wide", page_ic
 # INJEKSI CSS MODERN: Menyembunyikan elemen bawaan & menambahkan gaya modern
 st.markdown("""
 <style>
-    /* 1. Sembunyikan elemen bawaan Streamlit agar terlihat seperti web mandiri */
+    /* 1. Sembunyikan elemen bawaan Streamlit */
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
     .stApp > header {display:none;}
-    
-    /* Sembunyikan tombol Deploy yang kadang muncul */
     .stDeployButton {display:none !important;}
 
     /* 2. Kurangi jarak kosong di bagian atas aplikasi */
@@ -27,7 +25,7 @@ st.markdown("""
         padding-bottom: 2rem !important;
     }
 
-    /* 3. Memaksa menu tabs untuk menempel di atas dengan gaya elegan */
+    /* 3. Memaksa menu tabs untuk menempel di atas (Sticky) */
     div[data-testid="stTabs"] > div:first-of-type {
         position: -webkit-sticky !important;
         position: sticky !important;
@@ -39,10 +37,11 @@ st.markdown("""
         border-bottom: 2px solid var(--secondary-background-color);
     }
     
-    /* 4. Gaya Tab Text agar lebih tebal dan modern */
+    /* 4. Gaya Tab Text */
     button[data-baseweb="tab"] {
         font-size: 15px !important;
         letter-spacing: 0.5px;
+        font-weight: 600 !important;
     }
 
     /* 5. Efek Shadow pada Tabel DataFrame */
@@ -150,15 +149,30 @@ for periode in PERIODE_ROB:
 
 BULAN_MAP = {1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"}
 
+# Setup default kalender saat pertama dibuka
 waktu_utc = datetime.now(timezone.utc).replace(tzinfo=None)
 hari_ini = waktu_utc + timedelta(hours=8)
-default_tgl = datetime(2026, hari_ini.month, hari_ini.day)
+try:
+    default_tgl = date(2026, hari_ini.month, hari_ini.day)
+except ValueError:
+    default_tgl = date(2026, 2, 28) # Pencegahan error tanggal 29 Februari
 
-# --- 2. FUNGSI LOAD DATA ---
+# --- 2. FUNGSI LOAD DATA (DIPERBAIKI) ---
 @st.cache_data
 def load_range_data(start_date, end_date, wilayah_list):
     all_data = []
-    bulan_dibutuhkan = list(range(start_date.month, end_date.month + 1)) if start_date.year == end_date.year else [start_date.month, end_date.month]
+    
+    # Ambil list bulan yang dicakup oleh tanggal mulai hingga selesai
+    bulan_dibutuhkan = list(range(start_date.month, end_date.month + 1))
+    
+    # Fungsi Anti-Crash untuk tanggal Excel (Misal: 30 Februari)
+    def create_safe_datetime(year, month, day, hour):
+        try:
+            if pd.isna(day) or pd.isna(hour): return pd.NaT
+            return datetime(year, month, int(day), int(hour)-1, 0)
+        except ValueError:
+            return pd.NaT
+
     for wilayah in wilayah_list:
         for bln in bulan_dibutuhkan:
             file_name = f"Pasut_{BULAN_MAP[bln]}.xlsx"
@@ -167,16 +181,26 @@ def load_range_data(start_date, end_date, wilayah_list):
                     df = pd.read_excel(file_name, sheet_name=wilayah)
                     df.rename(columns={df.columns[0]: 'Tanggal'}, inplace=True)
                     df_melt = df.melt(id_vars=['Tanggal'], var_name='Jam', value_name='Ketinggian')
-                    df_melt['Jam'] = pd.to_numeric(df_melt['Jam'])
+                    
+                    df_melt['Jam'] = pd.to_numeric(df_melt['Jam'], errors='coerce')
                     df_melt['Ketinggian'] = pd.to_numeric(df_melt['Ketinggian'], errors='coerce')
-                    df_melt['Waktu'] = df_melt.apply(lambda r: datetime(2026, bln, int(r['Tanggal']), int(r['Jam'])-1, 0), axis=1)
+                    
+                    # Terapkan safe parser
+                    df_melt['Waktu'] = df_melt.apply(lambda r: create_safe_datetime(2026, bln, r['Tanggal'], r['Jam']), axis=1)
+                    
+                    # Buang data yang tanggalnya NaT (tidak valid)
+                    df_melt = df_melt.dropna(subset=['Waktu', 'Ketinggian'])
                     df_melt['Wilayah'] = wilayah
                     all_data.append(df_melt)
-                except Exception: pass
+                except Exception as e: 
+                    pass # Abaikan jika sheet tidak ditemukan
+                    
     if not all_data: return pd.DataFrame()
+    
     df_master = pd.concat(all_data, ignore_index=True)
     start_dt = datetime.combine(start_date, datetime.min.time())
     end_dt = datetime.combine(end_date, datetime.max.time())
+    
     return df_master[(df_master['Waktu'] >= start_dt) & (df_master['Waktu'] <= end_dt)].sort_values(['Wilayah', 'Waktu']).reset_index(drop=True)
 
 # --- 3. HEADER, LOGO & LIVE CLOCK (GAYA BMKG) ---
@@ -187,7 +211,6 @@ with col_logo:
     if logo_file: st.image(Image.open(logo_file), width=90)
 
 with col_title:
-    # Header dengan gradasi Biru-Hijau khas BMKG
     st.markdown("""
     <div style='background: linear-gradient(90deg, #0f4c81 0%, #1ea54a 100%); 
                 padding: 15px 25px; 
@@ -242,10 +265,9 @@ with st.expander("💡 Panduan Penggunaan & Cara Membaca Grafik"):
     - **Ikon Fenomena (🔵 / 🟤 / 🟢 / 🔴✨):** Muncul otomatis pada grafik untuk menandai fase astronomi yang memicu pasang surut ekstrem.
 
     **B. Karakteristik Pasut Perairan NTT:**
-    - **Harian Ganda (*Semi-diurnal*):** Karakteristik khas perairan NTT di mana dalam 24 jam terjadi **2 kali pasang tertinggi** dan **2 kali surut terendah**.
+    - **Harian Ganda (*Semi-diurnal*):** Dalam 24 jam terjadi **2 kali pasang tertinggi** dan **2 kali surut terendah**.
     - **Spring Tide (Pasang Purnama):** Terjadi saat fase Bulan Purnama atau Bulan Baru. Arus laut menjadi lebih kencang dan pasang air sangat tinggi.
-    - **Perigee:** Posisi di mana Bulan berada pada titik terdekat dengan Bumi, berpotensi meningkatkan kekuatan pasang air laut secara signifikan.
-    - **Neap Tide (Pasang Perbani):** Terjadi saat posisi bulan separuh, selisih pasang-surut harian bernilai paling minimum (kondisi air laut lebih tenang).
+    - **Perigee:** Posisi di mana Bulan berada pada titik terdekat dengan Bumi, berpotensi meningkatkan kekuatan pasang air laut.
     """)
 
 # --- 5. TABS INTERAKTIF ---
@@ -264,9 +286,13 @@ with tab1:
     st.write("") 
     p_col1, p_col2, p_col3 = st.columns([2, 1, 1])
     daftar_wilayah = ["Kupang", "Atapupu", "Labuan Bajo", "Ende", "Maumere", "Waingapu", "Kalabahi"]
-    with p_col1: pilih_wilayah = st.multiselect("**📍 Pilih Lokasi Pengamatan:**", daftar_wilayah, default=["Kupang"])
-    with p_col2: tgl_mulai = st.date_input("**📅 Tanggal Mulai:**", value=default_tgl, min_value=datetime(2026,1,1), max_value=datetime(2026,12,31))
-    with p_col3: tgl_selesai = st.date_input("**📅 Tanggal Selesai:**", value=default_tgl, min_value=datetime(2026,1,1), max_value=datetime(2026,12,31))
+    
+    with p_col1: 
+        pilih_wilayah = st.multiselect("**📍 Pilih Lokasi Pengamatan:**", daftar_wilayah, default=["Kupang"])
+    with p_col2: 
+        tgl_mulai = st.date_input("**📅 Tanggal Mulai:**", value=default_tgl, min_value=date(2026,1,1), max_value=date(2026,12,31))
+    with p_col3: 
+        tgl_selesai = st.date_input("**📅 Tanggal Selesai:**", value=default_tgl, min_value=date(2026,1,1), max_value=date(2026,12,31))
 
     if tgl_selesai >= tgl_mulai and len(pilih_wilayah) > 0:
         df_tren = load_range_data(tgl_mulai, tgl_selesai, pilih_wilayah)
@@ -312,15 +338,15 @@ with tab1:
             for row in DATA_ROB_2026:
                 if row['Potensi'] == "✅ Ya":
                     if any(wil in row['Stasiun_Acuan'] for wil in pilih_wilayah):
-                        start_rob = datetime.strptime(row['Start_Date'], '%Y-%m-%d')
-                        end_rob = datetime.strptime(row['End_Date'], '%Y-%m-%d').replace(hour=23, minute=59)
+                        start_rob = datetime.strptime(row['Start_Date'], '%Y-%m-%d').date()
+                        end_rob = datetime.strptime(row['End_Date'], '%Y-%m-%d').date()
                         prediksi_rentang = row.get('Prediksi_Pasut', '')
                         
-                        if (start_rob.date() <= tgl_selesai) and (end_rob.date() >= tgl_mulai):
+                        if (start_rob <= tgl_selesai) and (end_rob >= tgl_mulai):
                             rentang_kunci = (row['Start_Date'], row['End_Date'])
                             if rentang_kunci not in rob_ditampilkan:
                                 fig.add_vrect(
-                                    x0=start_rob, x1=end_rob, 
+                                    x0=start_rob, x1=end_rob + timedelta(days=1), 
                                     fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
                                     annotation_text=f"<b>⚠️ POTENSI ROB</b><br><b>Estimasi: {prediksi_rentang} m</b>", 
                                     annotation_position="top left", 
@@ -329,9 +355,10 @@ with tab1:
                                 rob_ditampilkan.add(rentang_kunci)
 
             for date_str, (name, icon, type) in FASE_BULAN_2026.items():
-                dt_obj = datetime.strptime(date_str, '%Y-%m-%d')
-                if tgl_mulai <= dt_obj.date() <= tgl_selesai:
-                    fig.add_annotation(x=dt_obj.replace(hour=12), y=max_y_grafik - 0.2, text=icon, showarrow=False, font=dict(size=24), hovertext=f"<b>Fase BMKG: {name}</b>")
+                dt_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+                if tgl_mulai <= dt_obj <= tgl_selesai:
+                    dt_with_time = datetime.combine(dt_obj, datetime.min.time()).replace(hour=12)
+                    fig.add_annotation(x=dt_with_time, y=max_y_grafik - 0.2, text=icon, showarrow=False, font=dict(size=24), hovertext=f"<b>Fase BMKG: {name}</b>")
 
             waktu_realtime = hari_ini.replace(year=2026)
             fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=3, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
@@ -365,7 +392,7 @@ with tab1:
                 with c1: st.markdown("<h5 style='color: #ef4444; margin-bottom: 5px; font-weight:700;'>⬆️ Jadwal Pasang Tertinggi</h5>", unsafe_allow_html=True); st.dataframe(h.reset_index(drop=True), use_container_width=True)
                 with c2: st.markdown("<h5 style='color: #3b82f6; margin-bottom: 5px; font-weight:700;'>⬇️ Jadwal Surut Terendah</h5>", unsafe_allow_html=True); st.dataframe(l.reset_index(drop=True), use_container_width=True)
         else:
-            st.warning("⚠️ Berkas data tidak ditemukan.")
+            st.warning("⚠️ Berkas data tidak ditemukan untuk rentang tanggal tersebut. Pastikan file Excel tersedia di server.")
 
 # ==========================================
 # TAB 2 & 3: KOMPARASI & FASE BULAN
@@ -380,8 +407,8 @@ with tab2:
         fig_cmp = go.Figure()
         data_found = False
         for idx, d_str in enumerate(tgl_cmp):
-            d_obj = datetime.strptime(d_str, '%Y-%m-%d')
-            df_day_full = load_range_data(d_obj.date(), d_obj.date(), [wil_cmp])
+            d_obj = datetime.strptime(d_str, '%Y-%m-%d').date()
+            df_day_full = load_range_data(d_obj, d_obj, [wil_cmp])
             if not df_day_full.empty:
                 data_found = True
                 fig_cmp.add_trace(go.Scatter(x=df_day_full['Waktu'].dt.hour + 1, y=df_day_full['Ketinggian'], mode='lines+markers', line=dict(width=3, shape='spline'), name=f"<b>Tgl {d_str}</b>", hovertemplate="<b>Jam %{x}:00 WITA</b><br>Tinggi: <b>%{y:.2f} m</b><extra></extra>"))
