@@ -12,9 +12,10 @@ st.set_page_config(page_title="Portal Pasut Maritim NTT", layout="wide", page_ic
 # INJEKSI CSS MODERN: Warna "Eye Care" dan Batas Elemen yang Jelas
 st.markdown("""
 <style>
-    /* 1. Sembunyikan elemen bawaan Streamlit (Aman untuk Kalender) */
+    /* 1. Sembunyikan elemen bawaan Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header[data-testid="stHeader"] {display:none;}
     .stDeployButton {display:none !important;}
 
     /* 2. EYE CARE BACKGROUND: Abu-abu lembut agar tidak silau */
@@ -50,11 +51,13 @@ st.markdown("""
         color: #475569 !important;
     }
 
-    /* 5. Efek Shadow pada Tabel DataFrame */
-    [data-testid="stDataFrame"] {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border-radius: 8px;
+    /* 5. PERBAIKAN CARD UI: Membungkus Grafik dan Tabel otomatis tanpa merusak Streamlit */
+    [data-testid="stDataFrame"], [data-testid="stPlotlyChart"] {
         background-color: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        padding: 15px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -316,7 +319,7 @@ with tab1:
 
             fig = go.Figure()
             warna = ['#0ea5e9', '#0d9488', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b', '#84cc16']
-            max_y_grafik = df_tren['Ketinggian'].max() + 1.5
+            max_y_grafik = df_tren['Ketinggian'].max() + 1.2
             
             for i, wil in enumerate(pilih_wilayah):
                 df_w = df_tren[df_tren['Wilayah'] == wil].copy()
@@ -344,9 +347,10 @@ with tab1:
                                 fig.add_vrect(
                                     x0=start_rob, x1=end_rob + timedelta(days=1), 
                                     fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
+                                    # PERBAIKAN: "inside top left" memastikan teks tidak menabrak batas luar grafik
                                     annotation_text=f"<b>⚠️ POTENSI ROB</b><br><b>Estimasi: {prediksi_rentang} m</b>", 
-                                    annotation_position="top left", 
-                                    annotation_font=dict(color="#b91c1c", size=12)
+                                    annotation_position="inside top left", 
+                                    annotation_font=dict(color="#b91c1c", size=11)
                                 )
                                 rob_ditampilkan.add(rentang_kunci)
 
@@ -354,24 +358,38 @@ with tab1:
                 dt_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
                 if tgl_mulai <= dt_obj <= tgl_selesai:
                     dt_with_time = datetime.combine(dt_obj, datetime.min.time()).replace(hour=12)
-                    fig.add_annotation(x=dt_with_time, y=max_y_grafik - 0.1, text=icon, showarrow=False, xanchor="center", yanchor="top", font=dict(size=24), hovertext=f"<b>Fase BMKG: {name}</b>")
+                    # PERBAIKAN: Ikon bulan diturunkan agar tidak menabrak atap
+                    fig.add_annotation(x=dt_with_time, y=max_y_grafik - 0.4, text=icon, showarrow=False, xanchor="center", yanchor="top", font=dict(size=24), hovertext=f"<b>Fase BMKG: {name}</b>")
 
             waktu_realtime = hari_ini.replace(year=2026)
-            fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=3, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
+            fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=2, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
             
-            # MEMISAHKAN TEKS AGAR TIDAK BERTUMPUK: Digeser sedikit ke bawah agar aman
-            fig.add_annotation(x=waktu_realtime, y=max_y_grafik - 0.3, text="<b>WAKTU SAAT INI</b>", showarrow=False, xanchor="left", yanchor="top", font=dict(color="#047857", size=11))
+            # PERBAIKAN: Label diturunkan posisinya dan diberi background agar tidak bertumpuk dengan garis merah
+            fig.add_annotation(
+                x=waktu_realtime, 
+                y=max_y_grafik - 0.1, 
+                text="<b>WAKTU SAAT INI</b>", 
+                showarrow=False, 
+                xanchor="left", 
+                yanchor="top", 
+                font=dict(color="#047857", size=11),
+                bgcolor="rgba(255, 255, 255, 0.85)",
+                bordercolor="#10b981",
+                borderwidth=1,
+                borderpad=3
+            )
 
-            # Merender grafik langsung dengan background putih bawaan Plotly agar tidak error
+            # Render layout Plotly secara transparan, CSS Streamlit di atas yang akan menjadikannya Card putih
             fig.update_layout(
                 title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut (LAT)</b>", font=dict(size=18)), 
                 xaxis=dict(title="<b>Kronologi Waktu (WITA)</b>", tickfont=dict(weight='bold'), showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"), 
                 yaxis=dict(title="<b>Tinggi Air (m)</b>", tickfont=dict(weight='bold'), showgrid=True, range=[0, max_y_grafik]), 
-                legend=dict(orientation="h", yanchor="bottom", y=1.12, xanchor="right", x=1), 
-                height=600, margin=dict(t=100, b=30, l=40, r=40), hovermode="x unified",
-                paper_bgcolor="#ffffff", plot_bgcolor="#ffffff"
+                legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1), 
+                height=600, margin=dict(t=80, b=30, l=40, r=40), hovermode="x unified",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
             )
             
+            # Menampilkan plot secara aman tanpa kotak div html yang rentan error
             st.plotly_chart(fig, use_container_width=True, theme="streamlit")
             
             st.write("---")
@@ -414,7 +432,7 @@ with tab2:
                 data_found = True
                 fig_cmp.add_trace(go.Scatter(x=df_day_full['Waktu'].dt.hour + 1, y=df_day_full['Ketinggian'], mode='lines+markers', line=dict(width=3, shape='spline'), name=f"<b>Tgl {d_str}</b>", hovertemplate="<b>Jam %{x}:00 WITA</b><br>Tinggi: <b>%{y:.2f} m</b><extra></extra>"))
         if data_found:
-            fig_cmp.update_layout(title=dict(text=f"<b>Analisis Komparasi Siklus Harian Pelabuhan {wil_cmp}</b>", font=dict(size=18)), xaxis=dict(title="<b>Jam Operasional (WITA)</b>", tickfont=dict(weight='bold'), tickmode='linear', tick0=1, dtick=1), yaxis=dict(title="<b>Tinggi Air - LAT (m)</b>", tickfont=dict(weight='bold')), height=500, margin=dict(t=50, b=40, l=40, r=40), hovermode="x unified", paper_bgcolor="#ffffff", plot_bgcolor="#ffffff")
+            fig_cmp.update_layout(title=dict(text=f"<b>Analisis Komparasi Siklus Harian Pelabuhan {wil_cmp}</b>", font=dict(size=18)), xaxis=dict(title="<b>Jam Operasional (WITA)</b>", tickfont=dict(weight='bold'), tickmode='linear', tick0=1, dtick=1), yaxis=dict(title="<b>Tinggi Air - LAT (m)</b>", tickfont=dict(weight='bold')), height=500, margin=dict(t=50, b=40, l=40, r=40), hovermode="x unified", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig_cmp, use_container_width=True, theme="streamlit")
 
 with tab3:
