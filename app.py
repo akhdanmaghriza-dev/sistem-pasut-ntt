@@ -12,9 +12,8 @@ st.set_page_config(page_title="Portal Pasut Maritim NTT", layout="wide", page_ic
 # INJEKSI CSS MODERN: Menyembunyikan elemen bawaan & menambahkan gaya modern
 st.markdown("""
 <style>
-    /* 1. Sembunyikan elemen bawaan Streamlit */
+    /* 1. Sembunyikan elemen bawaan Streamlit (PERBAIKAN KALENDER) */
     #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
     footer {visibility: hidden;}
     .stApp > header {display:none;}
     .stDeployButton {display:none !important;}
