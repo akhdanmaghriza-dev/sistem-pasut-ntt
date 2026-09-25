@@ -319,7 +319,9 @@ with tab1:
 
             fig = go.Figure()
             warna = ['#0ea5e9', '#0d9488', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b', '#84cc16']
-            max_y_grafik = df_tren['Ketinggian'].max() + 0.8
+            
+            # PERBAIKAN GRAFIK TERPOTONG (Nilai max ditambah agar atap lebih lega)
+            max_y_grafik = df_tren['Ketinggian'].max() + 1.2
             
             for i, wil in enumerate(pilih_wilayah):
                 df_w = df_tren[df_tren['Wilayah'] == wil].copy()
@@ -363,12 +365,15 @@ with tab1:
             fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=3, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
             fig.add_annotation(x=waktu_realtime, y=max_y_grafik - 0.05, text="<b>WAKTU SAAT INI</b>", showarrow=False, xanchor="left", yanchor="bottom", font=dict(color="#047857", size=11))
 
+            # PERBAIKAN GRAFIK TERPOTONG (Margin Top 't' dinaikkan menjadi 85, dan Legend 'y' menjadi 1.08)
             fig.update_layout(
                 title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut (LAT)</b>", font=dict(size=18)), 
                 xaxis=dict(title="<b>Kronologi Waktu (WITA)</b>", tickfont=dict(weight='bold'), showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"), 
                 yaxis=dict(title="<b>Tinggi Air (m)</b>", tickfont=dict(weight='bold'), showgrid=True, range=[0, max_y_grafik]), 
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), 
-                height=600, margin=dict(t=50, b=30, l=40, r=40), hovermode="x unified",
+                legend=dict(orientation="h", yanchor="bottom", y=1.08, xanchor="right", x=1), 
+                height=600, 
+                margin=dict(t=85, b=30, l=40, r=40), 
+                hovermode="x unified",
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
             )
             st.plotly_chart(fig, use_container_width=True, theme="streamlit")
