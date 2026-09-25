@@ -9,44 +9,53 @@ import streamlit.components.v1 as components
 # --- 1. CONFIG HALAMAN & CSS GLOBAL ---
 st.set_page_config(page_title="Portal Pasut Maritim NTT", layout="wide", page_icon="🌊")
 
-# INJEKSI CSS MODERN: Menyembunyikan elemen bawaan & menambahkan gaya modern
+# INJEKSI CSS MODERN: Warna "Eye Care" dan Batas Elemen yang Jelas
 st.markdown("""
 <style>
-    /* 1. Sembunyikan elemen bawaan Streamlit (Aman untuk Kalender) */
+    /* 1. Sembunyikan elemen bawaan Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header[data-testid="stHeader"] {display:none;}
     .stDeployButton {display:none !important;}
 
-    /* 2. Kurangi jarak kosong di bagian atas aplikasi */
+    /* 2. EYE CARE BACKGROUND: Abu-abu lembut agar tidak silau */
+    .stApp {
+        background-color: #f1f5f9 !important;
+    }
+
+    /* 3. Kurangi jarak kosong di bagian atas aplikasi */
     .block-container {
         padding-top: 1.5rem !important;
         padding-bottom: 2rem !important;
     }
 
-    /* 3. Memaksa menu tabs untuk menempel di atas (Sticky) */
+    /* 4. TABS MENU: Background Putih agar terpisah dari abu-abu */
     div[data-testid="stTabs"] > div:first-of-type {
         position: -webkit-sticky !important;
         position: sticky !important;
         top: 0rem !important;
         z-index: 99999 !important;
-        background-color: var(--background-color) !important;
+        background-color: #ffffff !important;
         padding-top: 15px;
         padding-bottom: 5px;
-        border-bottom: 2px solid var(--secondary-background-color);
+        border-bottom: 2px solid #cbd5e1 !important;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     
-    /* 4. Gaya Tab Text */
+    /* Gaya Tab Text */
     button[data-baseweb="tab"] {
         font-size: 15px !important;
         letter-spacing: 0.5px;
         font-weight: 600 !important;
+        color: #475569 !important;
     }
 
     /* 5. Efek Shadow pada Tabel DataFrame */
     [data-testid="stDataFrame"] {
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         border-radius: 8px;
+        background-color: #ffffff;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -155,13 +164,12 @@ try:
 except ValueError:
     default_tgl = date(2026, 2, 28) 
 
-# --- 2. FUNGSI LOAD DATA (DI-UPGRADE ANTI CRASH TANGGAL) ---
+# --- 2. FUNGSI LOAD DATA ---
 @st.cache_data
 def load_range_data(start_date, end_date, wilayah_list):
     all_data = []
     bulan_dibutuhkan = list(range(start_date.month, end_date.month + 1)) if start_date.year == end_date.year else [start_date.month, end_date.month]
     
-    # Pelindung sistem dari tanggal fiktif di Excel
     def create_safe_datetime(year, month, day, hour):
         try:
             if pd.isna(day) or pd.isna(hour): return pd.NaT
@@ -191,7 +199,7 @@ def load_range_data(start_date, end_date, wilayah_list):
     end_dt = datetime.combine(end_date, datetime.max.time())
     return df_master[(df_master['Waktu'] >= start_dt) & (df_master['Waktu'] <= end_dt)].sort_values(['Wilayah', 'Waktu']).reset_index(drop=True)
 
-# --- 3. HEADER, LOGO & LIVE CLOCK (BMKG STYLE) ---
+# --- 3. HEADER, LOGO & LIVE CLOCK ---
 col_logo, col_title, col_clock = st.columns([1, 8, 3])
 
 with col_logo:
@@ -288,28 +296,27 @@ with tab1:
             idx_max, idx_min = df_tren['Ketinggian'].idxmax(), df_tren['Ketinggian'].idxmin()
             
             m1, m2 = st.columns(2)
+            # EYE CARE UPDATE: Background Card diubah ke Putih dengan Border agar tidak menyatu dengan background utama
             with m1:
                 st.markdown(f"""
-                <div style='background-color: var(--secondary-background-color); border-left: 6px solid #ef4444; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 20px;'>
+                <div style='background-color: #ffffff; border: 1px solid #cbd5e1; border-left: 6px solid #ef4444; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px;'>
                     <p style='color: #ef4444; margin:0; font-weight: 800; font-size:14px; letter-spacing: 1px;'>🌊 PUNCAK PASANG MAKSIMUM</p>
-                    <h2 style='color: var(--text-color); margin:5px 0 0 0; font-size: 36px; font-weight: 800;'>{df_tren.loc[idx_max, 'Ketinggian']:.2f} <span style='font-size:16px; font-weight:500; color: gray;'>m</span></h2>
-                    <p style='color: var(--text-color); margin:5px 0 0 0; font-size:14px; font-weight: 600;'>📍 {df_tren.loc[idx_max, 'Wilayah']} | 🕒 {df_tren.loc[idx_max, 'Waktu'].strftime('%d %b %Y, %H:00 WITA')}</p>
+                    <h2 style='color: #1e293b; margin:5px 0 0 0; font-size: 36px; font-weight: 800;'>{df_tren.loc[idx_max, 'Ketinggian']:.2f} <span style='font-size:16px; font-weight:500; color: gray;'>m</span></h2>
+                    <p style='color: #475569; margin:5px 0 0 0; font-size:14px; font-weight: 600;'>📍 {df_tren.loc[idx_max, 'Wilayah']} | 🕒 {df_tren.loc[idx_max, 'Waktu'].strftime('%d %b %Y, %H:00 WITA')}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
             with m2:
                 st.markdown(f"""
-                <div style='background-color: var(--secondary-background-color); border-left: 6px solid #3b82f6; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 20px;'>
+                <div style='background-color: #ffffff; border: 1px solid #cbd5e1; border-left: 6px solid #3b82f6; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px;'>
                     <p style='color: #3b82f6; margin:0; font-weight: 800; font-size:14px; letter-spacing: 1px;'>📉 TITIK SURUT MINIMUM</p>
-                    <h2 style='color: var(--text-color); margin:5px 0 0 0; font-size: 36px; font-weight: 800;'>{df_tren.loc[idx_min, 'Ketinggian']:.2f} <span style='font-size:16px; font-weight:500; color: gray;'>m</span></h2>
-                    <p style='color: var(--text-color); margin:5px 0 0 0; font-size:14px; font-weight: 600;'>📍 {df_tren.loc[idx_min, 'Wilayah']} | 🕒 {df_tren.loc[idx_min, 'Waktu'].strftime('%d %b %Y, %H:00 WITA')}</p>
+                    <h2 style='color: #1e293b; margin:5px 0 0 0; font-size: 36px; font-weight: 800;'>{df_tren.loc[idx_min, 'Ketinggian']:.2f} <span style='font-size:16px; font-weight:500; color: gray;'>m</span></h2>
+                    <p style='color: #475569; margin:5px 0 0 0; font-size:14px; font-weight: 600;'>📍 {df_tren.loc[idx_min, 'Wilayah']} | 🕒 {df_tren.loc[idx_min, 'Waktu'].strftime('%d %b %Y, %H:00 WITA')}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
             fig = go.Figure()
             warna = ['#0ea5e9', '#0d9488', '#8b5cf6', '#f59e0b', '#ec4899', '#64748b', '#84cc16']
-            
-            # DI-UPGRADE AGAR GRAFIK ATAS TIDAK KEPOTONG
             max_y_grafik = df_tren['Ketinggian'].max() + 1.5
             
             for i, wil in enumerate(pilih_wilayah):
@@ -354,16 +361,22 @@ with tab1:
             fig.add_trace(go.Scatter(x=[waktu_realtime, waktu_realtime], y=[0, max_y_grafik], mode='lines', line=dict(color='#10b981', width=3, dash='dash'), name="Waktu Saat Ini", hoverinfo='skip'))
             fig.add_annotation(x=waktu_realtime, y=max_y_grafik, text="<b>WAKTU SAAT INI</b>", showarrow=False, xanchor="left", yanchor="top", font=dict(color="#047857", size=11))
 
+            # EYE CARE UPDATE: Area chart dijadikan putih seperti card, agar "mengambang" di atas background abu-abu
             fig.update_layout(
                 title=dict(text="<b>Grafik Tren Fluktuasi Ketinggian Air Laut (LAT)</b>", font=dict(size=18)), 
                 xaxis=dict(title="<b>Kronologi Waktu (WITA)</b>", tickfont=dict(weight='bold'), showgrid=True, rangeslider=dict(visible=True, thickness=0.06), type="date"), 
                 yaxis=dict(title="<b>Tinggi Air (m)</b>", tickfont=dict(weight='bold'), showgrid=True, range=[0, max_y_grafik]), 
                 legend=dict(orientation="h", yanchor="bottom", y=1.12, xanchor="right", x=1), 
                 height=600, margin=dict(t=100, b=30, l=40, r=40), hovermode="x unified",
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)"
+                paper_bgcolor="#ffffff", plot_bgcolor="#ffffff"
             )
-            st.plotly_chart(fig, use_container_width=True, theme="streamlit")
             
+            # Membungkus grafik dalam div putih agar serasi dengan kartu di atasnya
+            st.markdown("<div style='background-color: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);'>", unsafe_allow_html=True)
+            st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            st.write("---")
             st.markdown("### **🕒 Jadwal Pasang Surut Harian**")
             for wil in pilih_wilayah:
                 if len(pilih_wilayah) > 1: st.markdown(f"**📍 Lokasi Pelabuhan: {wil}**")
@@ -403,8 +416,10 @@ with tab2:
                 data_found = True
                 fig_cmp.add_trace(go.Scatter(x=df_day_full['Waktu'].dt.hour + 1, y=df_day_full['Ketinggian'], mode='lines+markers', line=dict(width=3, shape='spline'), name=f"<b>Tgl {d_str}</b>", hovertemplate="<b>Jam %{x}:00 WITA</b><br>Tinggi: <b>%{y:.2f} m</b><extra></extra>"))
         if data_found:
-            fig_cmp.update_layout(title=dict(text=f"<b>Analisis Komparasi Siklus Harian Pelabuhan {wil_cmp}</b>", font=dict(size=18)), xaxis=dict(title="<b>Jam Operasional (WITA)</b>", tickfont=dict(weight='bold'), tickmode='linear', tick0=1, dtick=1), yaxis=dict(title="<b>Tinggi Air - LAT (m)</b>", tickfont=dict(weight='bold')), height=500, margin=dict(t=50, b=40, l=40, r=40), hovermode="x unified", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            fig_cmp.update_layout(title=dict(text=f"<b>Analisis Komparasi Siklus Harian Pelabuhan {wil_cmp}</b>", font=dict(size=18)), xaxis=dict(title="<b>Jam Operasional (WITA)</b>", tickfont=dict(weight='bold'), tickmode='linear', tick0=1, dtick=1), yaxis=dict(title="<b>Tinggi Air - LAT (m)</b>", tickfont=dict(weight='bold')), height=500, margin=dict(t=50, b=40, l=40, r=40), hovermode="x unified", paper_bgcolor="#ffffff", plot_bgcolor="#ffffff")
+            st.markdown("<div style='background-color: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);'>", unsafe_allow_html=True)
             st.plotly_chart(fig_cmp, use_container_width=True, theme="streamlit")
+            st.markdown("</div>", unsafe_allow_html=True)
 
 with tab3:
     st.write("")
@@ -465,7 +480,7 @@ with tab5:
 
 # --- 6. FOOTER CUSTOM ---
 st.markdown("""
-<div style='text-align: center; color: #64748b; font-size: 12px; padding: 20px; margin-top: 40px; background-color: var(--secondary-background-color); border-radius: 8px; border: 1px solid var(--border-color);'>
+<div style='text-align: center; color: #64748b; font-size: 12px; padding: 20px; margin-top: 40px; background-color: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);'>
     <b>SUMBER PRIMER:</b> Pusat Hidro-Oseanografi TNI AL (Pushidrosal) & Badan Meteorologi Klimatologi dan Geofisika (BMKG) Pusat.<br>
     <i>DISCLAIMER: Seluruh rentang peringatan rob merupakan hasil algoritma kalender astronomis. Ketinggian muka air laut aktual di lapangan dapat berbeda akibat faktor cuaca ekstrem setempat.</i>
 </div>
