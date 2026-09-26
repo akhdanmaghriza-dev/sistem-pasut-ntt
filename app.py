@@ -9,7 +9,7 @@ import streamlit.components.v1 as components
 # --- 1. CONFIG HALAMAN & CSS GLOBAL ---
 st.set_page_config(page_title="Portal Pasut Maritim NTT", layout="wide", page_icon="🌊")
 
-# INJEKSI CSS MODERN: Warna "Eye Care" dan Batas Elemen yang Jelas
+# INJEKSI CSS MODERN: Warna "Eye Care", Tab Pop-up, dan Batas Elemen yang Jelas
 st.markdown("""
 <style>
     /* 1. Sembunyikan elemen bawaan Streamlit */
@@ -367,10 +367,24 @@ with tab1:
                         if (start_rob <= tgl_selesai) and (end_rob >= tgl_mulai):
                             rentang_kunci = (row['Start_Date'], row['End_Date'])
                             if rentang_kunci not in rob_ditampilkan:
+                                
+                                # --- TAMBAHAN BARU: MENCARI NILAI MAX AKTUAL SECARA DINAMIS ---
+                                mask_tanggal_rob = (df_tren['Waktu'].dt.date >= start_rob) & (df_tren['Waktu'].dt.date <= end_rob)
+                                df_rob_terfilter = df_tren[mask_tanggal_rob]
+                                
+                                if not df_rob_terfilter.empty:
+                                    puncak_aktual = df_rob_terfilter['Ketinggian'].max()
+                                    teks_puncak = f"Puncak Aktual: {puncak_aktual:.2f} m"
+                                else:
+                                    teks_puncak = "Data Puncak Belum Tersedia"
+                                
+                                teks_anotasi_cerdas = f"<b>⚠️ POTENSI ROB</b><br><span style='font-size:10px;'>Batas Buku: {prediksi_rentang} m</span><br><b>{teks_puncak}</b>"
+                                # --------------------------------------------------------------
+
                                 fig.add_vrect(
                                     x0=start_rob, x1=end_rob + timedelta(days=1), 
                                     fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
-                                    annotation_text=f"<b>⚠️ POTENSI ROB</b><br><b>Estimasi: {prediksi_rentang} m</b>", 
+                                    annotation_text=teks_anotasi_cerdas, 
                                     annotation_position="inside top left", 
                                     annotation_font=dict(color="#b91c1c", size=11)
                                 )
