@@ -121,7 +121,7 @@ FASE_BULAN_2026 = {
     '2026-12-24': ('Supermoon (Perigee + Bulan Purnama)', '🔵✨', 'Spring Tide Maksimum (Sangat Tinggi)'),
 }
 
-# --- GENERATOR DATA POTENSI ROB 2026 (Dipertahankan untuk Tab 5) ---
+# --- GENERATOR DATA POTENSI ROB 2026 ---
 PERIODE_ROB = [
     ("1. Januari", "2026-01-01", "2026-01-06", "1 - 6 Januari 2026"),
     ("1. Januari", "2026-01-17", "2026-01-22", "17 - 22 Januari 2026"),
@@ -356,62 +356,38 @@ with tab1:
                 fig.add_trace(go.Scatter(x=hi['Waktu'], y=hi['Ketinggian'], mode='markers+text', text=hi['Ketinggian'].apply(lambda x:f"<b>{x:.2f}m</b>"), textposition="top center", textfont=dict(color="#ef4444", size=12), marker=dict(color='#ef4444', size=8), name="Titik Pasang", showlegend=(i==0)))
                 fig.add_trace(go.Scatter(x=lo['Waktu'], y=lo['Ketinggian'], mode='markers+text', text=lo['Ketinggian'].apply(lambda x:f"<b>{x:.2f}m</b>"), textposition="bottom center", textfont=dict(color="#3b82f6", size=12), marker=dict(color='#3b82f6', size=8), name="Titik Surut", showlegend=(i==0)))
 
-            # --- START PERBAIKAN LOGIKA BLOK MERAH (DATA-DRIVEN) ---
-            # 1. Menentukan Ambang Batas (Threshold) Waspada dari dictionary LOKASI_ROB
-            batas_kritis = {}
-            for lok in LOKASI_ROB:
-                for stasiun in lok["Stasiun_Acuan"]:
-                    batas_kritis[stasiun] = lok["B_Min"] # Menggunakan B_Min sebagai batas aman minimal
-            
-            blok_sudah_digambar = [] 
-            
-            # 2. Deteksi Otomatis: Cari hari di mana air laut melewati ambang batas
-            for wil in pilih_wilayah:
-                df_w = df_tren[df_tren['Wilayah'] == wil].copy()
-                if df_w.empty: continue
-                    
-                ambang_batas = batas_kritis.get(wil, 2.0) # Tarik threshold, default 2.0m
-                df_bahaya = df_w[df_w['Ketinggian'] >= ambang_batas]
-                
-                if not df_bahaya.empty:
-                    tanggal_bahaya = df_bahaya['Waktu'].dt.date.unique()
-                    for tgl in tanggal_bahaya:
-                        # Buat rentang blok (H-1 sampai H+1 dari tanggal kritis)
-                        start_blok = tgl - timedelta(days=1)
-                        end_blok = tgl + timedelta(days=1)
+            # --- LOGIKA CALENDAR-BASED DENGAN TEKS PUNCAK AKTUAL DINAMIS ---
+            rob_ditampilkan = set()
+            for row in DATA_ROB_2026:
+                if row['Potensi'] == "✅ Ya":
+                    if any(wil in row['Stasiun_Acuan'] for wil in pilih_wilayah):
+                        start_rob = datetime.strptime(row['Start_Date'], '%Y-%m-%d').date()
+                        end_rob = datetime.strptime(row['End_Date'], '%Y-%m-%d').date()
+                        prediksi_rentang = row.get('Prediksi_Pasut', '')
                         
-                        # Gabungkan blok yang berdekatan/beririsan agar tidak tertumpuk
-                        tumpang_tindih = False
-                        for b in blok_sudah_digambar:
-                            if start_blok <= b['end'] and end_blok >= b['start']:
-                                tumpang_tindih = True
-                                b['start'] = min(b['start'], start_blok)
-                                b['end'] = max(b['end'], end_blok)
-                                break
-                        
-                        if not tumpang_tindih:
-                            blok_sudah_digambar.append({'start': start_blok, 'end': end_blok})
-
-            # 3. Gambar Blok Merah di Grafik secara Presisi
-            for blok in blok_sudah_digambar:
-                s_date = blok['start']
-                e_date = blok['end']
-                
-                # Cari nilai tertinggi absolut pada rentang blok ini untuk teks anotasi
-                mask = (df_tren['Waktu'].dt.date >= s_date) & (df_tren['Waktu'].dt.date <= e_date)
-                df_rentang = df_tren[mask]
-                
-                if not df_rentang.empty:
-                    puncak_aktual = df_rentang['Ketinggian'].max()
-                    
-                    fig.add_vrect(
-                        x0=s_date, x1=e_date + timedelta(days=1), 
-                        fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
-                        annotation_text=f"<b>⚠️ POTENSI ROB</b><br><b>Puncak Aktual: {puncak_aktual:.2f} m</b>", 
-                        annotation_position="inside top left", 
-                        annotation_font=dict(color="#b91c1c", size=11)
-                    )
-            # --- END PERBAIKAN LOGIKA BLOK MERAH ---
+                        if (start_rob <= tgl_selesai) and (end_rob >= tgl_mulai):
+                            rentang_kunci = (row['Start_Date'], row['End_Date'])
+                            if rentang_kunci not in rob_ditampilkan:
+                                
+                                # 1. Cari Puncak Aktual Khusus di Rentang Tanggal Kalender Ini
+                                mask_tanggal = (df_tren['Waktu'].dt.date >= start_rob) & (df_tren['Waktu'].dt.date <= end_rob)
+                                df_terfilter = df_tren[mask_tanggal]
+                                
+                                if not df_terfilter.empty:
+                                    puncak = df_terfilter['Ketinggian'].max()
+                                    teks_anotasi = f"<b>⚠️ POTENSI ROB</b><br><span style='font-size:10px;'>Batas Buku: {prediksi_rentang} m</span><br><b>Puncak Aktual: {puncak:.2f} m</b>"
+                                else:
+                                    teks_anotasi = f"<b>⚠️ POTENSI ROB</b><br><b>Batas Buku: {prediksi_rentang} m</b>"
+                                
+                                # 2. Gambar Kotak Merahnya
+                                fig.add_vrect(
+                                    x0=start_rob, x1=end_rob + timedelta(days=1), 
+                                    fillcolor="rgba(239, 68, 68, 0.12)", layer="below", line_width=0, 
+                                    annotation_text=teks_anotasi, 
+                                    annotation_position="inside top left", 
+                                    annotation_font=dict(color="#b91c1c", size=11)
+                                )
+                                rob_ditampilkan.add(rentang_kunci)
 
             for date_str, (name, icon, type) in FASE_BULAN_2026.items():
                 dt_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
